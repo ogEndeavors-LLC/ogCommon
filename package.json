@@ -1,0 +1,29 @@
+{
+  "name": "ogcommon",
+  "version": "1.1.1",
+  "description": "Common Client Side Components",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "start",
+    "build": "babel src --out-dir lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ogEndeavors-LLC/ogCommon.git"
+  },
+  "author": "Ahmer Gondal",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/ogEndeavors-LLC/ogCommon/issues"
+  },
+  "homepage": "https://github.com/ogEndeavors-LLC/ogCommon#readme",
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.25.9",
+    "@babel/core": "^7.26.0",
+    "@babel/preset-react": "^7.25.9"
+  }
+}
