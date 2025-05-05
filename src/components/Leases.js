@@ -12,9 +12,9 @@ import {
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
-import { useTheme } from "../contexts/ThemeContext";
+import { useTheme } from "ogcommon";
 
-const Leases = () => {
+const Leases = ({ baseUrl }) => {
   const { theme } = useTheme();
   const [leases, setLeases] = useState([]);
   const [filteredLeases, setFilteredLeases] = useState([]);
@@ -48,41 +48,30 @@ const Leases = () => {
 
   const fetchLeases = async () => {
     try {
-      const hostname = window.location.hostname;
-      const parts = hostname.split(".");
-      let baseUrl;
-
-      if (parts.length > 2) {
-        const subdomainPart = parts.shift();
-        baseUrl = `https://${subdomainPart}.ogfieldticket.com`;
-      } else {
-        baseUrl = "https://test.ogfieldticket.com";
-      }
-
       const response = await axios.get(`${baseUrl}/api/leases.php`);
       const data = response.data;
       setLeases(data);
-      setFilteredLeases(data);
     } catch (error) {
       console.error("Error fetching leases:", error);
     }
   };
 
   const handleSearch = (e) => {
-    const searchTerm = e.target.value.toLowerCase();
-    setSearchTerm(searchTerm);
+    setSearchTerm(e.target.value.toLowerCase());
+    setCurrentPage(1);
+  };
 
+  useEffect(() => {
     const filtered = leases.filter(
       (lease) =>
-        lease.LeaseID.toLowerCase().includes(searchTerm) ||
-        lease.LeaseName.toLowerCase().includes(searchTerm) ||
-        lease.PumperID.toLowerCase().includes(searchTerm) ||
-        lease.RRC.toLowerCase().includes(searchTerm)
+        lease.LeaseID.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lease.LeaseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lease.PumperID.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lease.RRC.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     setFilteredLeases(filtered);
-    setCurrentPage(1);
-  };
+  }, [leases, searchTerm]);
 
   const handleSort = (key) => {
     let order = sortOrder === "asc" ? "desc" : "asc";
@@ -161,17 +150,6 @@ const Leases = () => {
         Tanks: [...formDataTanks, ...filteredTanks],
         Wells: [...formDataWells, ...filteredWells],
       };
-
-      const hostname = window.location.hostname;
-      const parts = hostname.split(".");
-      let baseUrl;
-
-      if (parts.length > 2) {
-        const subdomainPart = parts.shift();
-        baseUrl = `https://${subdomainPart}.ogfieldticket.com`;
-      } else {
-        baseUrl = "https://test.ogfieldticket.com";
-      }
 
       const response = await axios.patch(
         `${baseUrl}/api/leases.php`,
@@ -417,17 +395,6 @@ const EditLeaseModal = ({
 
   const handleDeleteWell = async (wellId) => {
     try {
-      const hostname = window.location.hostname;
-      const parts = hostname.split(".");
-      let baseUrl;
-
-      if (parts.length > 2) {
-        const subdomainPart = parts.shift();
-        baseUrl = `https://${subdomainPart}.ogfieldticket.com`;
-      } else {
-        baseUrl = "https://test.ogfieldticket.com";
-      }
-
       const response = await axios.delete(`${baseUrl}/api/leases.php`, {
         data: { LeaseID: lease.LeaseID, Wells: [{ UniqID: wellId }] },
       });
@@ -448,17 +415,6 @@ const EditLeaseModal = ({
 
   const fetchOptions = async () => {
     try {
-      const hostname = window.location.hostname;
-      const parts = hostname.split(".");
-      let baseUrl;
-
-      if (parts.length > 2) {
-        const subdomainPart = parts.shift();
-        baseUrl = `https://${subdomainPart}.ogfieldticket.com`;
-      } else {
-        baseUrl = "https://test.ogfieldticket.com";
-      }
-
       const response = await axios.get(`${baseUrl}/api/usertags.php`);
       const data = response.data;
       const tags = data.filter((item) => item.TagID && item.TagDesc);
@@ -499,17 +455,6 @@ const EditLeaseModal = ({
 
   const handleDeleteTank = async (tankId) => {
     try {
-      const hostname = window.location.hostname;
-      const parts = hostname.split(".");
-      let baseUrl;
-
-      if (parts.length > 2) {
-        const subdomainPart = parts.shift();
-        baseUrl = `https://${subdomainPart}.ogfieldticket.com`;
-      } else {
-        baseUrl = "https://test.ogfieldticket.com";
-      }
-
       const response = await axios.delete(`${baseUrl}/api/leases.php`, {
         data: { LeaseID: lease.LeaseID, Tanks: [{ UniqID: tankId }] },
       });
@@ -539,7 +484,9 @@ const EditLeaseModal = ({
           WellID: "",
           Active: "Y",
           PropertyNum: "",
-          AllocPct: "",
+          API: "", // varchar(10), no 0.0000 default
+          RRCLeaseID: "", // varchar(6)
+          CP: "",
         },
       ],
     });
@@ -1208,16 +1155,20 @@ const EditLeaseModal = ({
                 )}
               </>
             )}
-
             {activeTab === "wells" && (
               <div ref={wellSectionRef} className="space-y-4 mt-6">
                 {formData.Wells?.map((well, index) => (
-                  <div key={index} className="border rounded-lg p-4">
+                  <div
+                    key={well.UniqID || index}
+                    className="border rounded-lg p-4"
+                  >
                     <div
                       onClick={() => toggleExpandWell(index)}
                       className="flex justify-between items-center cursor-pointer"
                     >
-                      <span className="font-semibold">Well {well.WellID}</span>
+                      <span className="font-semibold">
+                        Well {well.WellID || index + 1}
+                      </span>
                       <FontAwesomeIcon
                         icon={
                           expandedWellIndex === index
@@ -1226,19 +1177,24 @@ const EditLeaseModal = ({
                         }
                       />
                     </div>
+
                     {expandedWellIndex === index && (
                       <div className="mt-4 grid grid-cols-2 gap-4">
+                        {/* Well ID */}
                         <div className="col-span-2">
                           <label
-                            htmlFor="WellID"
+                            htmlFor={`WellID-${index}`}
                             className="block text-sm font-medium text-gray-700"
                           >
                             Well ID
                           </label>
                           <input
+                            id={`WellID-${index}`}
+                            name="WellID"
                             type="text"
                             placeholder="Well ID"
                             value={well.WellID}
+                            required
                             onChange={(e) =>
                               setFormData({
                                 ...formData,
@@ -1249,48 +1205,51 @@ const EditLeaseModal = ({
                                 ),
                               })
                             }
-                            className="mt-1 form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-blue-300 transition duration-150"
-                            required
+                            className="mt-1 form-input block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:border-blue-300 transition duration-150"
                           />
                         </div>
-                        {/* New External Property # Field */}
+
+                        {/* External Property # */}
                         <div>
                           <label
-                            htmlFor="ExternalPropertyNumber"
+                            htmlFor={`PropertyNum-${index}`}
                             className="block text-sm font-medium text-gray-700"
                           >
                             External Property #
                           </label>
                           <input
+                            id={`PropertyNum-${index}`}
+                            name="PropertyNum"
                             type="text"
                             placeholder="External Property #"
-                            value={well.ExternalPropertyNumber}
+                            value={well.PropertyNum}
                             onChange={(e) =>
                               setFormData({
                                 ...formData,
                                 Wells: formData.Wells.map((w, i) =>
                                   i === index
-                                    ? {
-                                        ...w,
-                                        ExternalPropertyNumber: e.target.value,
-                                      }
+                                    ? { ...w, PropertyNum: e.target.value }
                                     : w
                                 ),
                               })
                             }
-                            className="mt-1 form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-blue-300 transition duration-150"
+                            className="mt-1 form-input block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:border-blue-300 transition duration-150"
                           />
                         </div>
-                        {/* New API Field */}
+
+                        {/* API (varchar(10)) */}
                         <div>
                           <label
-                            htmlFor="API"
+                            htmlFor={`API-${index}`}
                             className="block text-sm font-medium text-gray-700"
                           >
                             API
                           </label>
                           <input
+                            id={`API-${index}`}
+                            name="API"
                             type="text"
+                            maxLength={10}
                             placeholder="API"
                             value={well.API}
                             onChange={(e) =>
@@ -1303,43 +1262,50 @@ const EditLeaseModal = ({
                                 ),
                               })
                             }
-                            className="mt-1 form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-blue-300 transition duration-150"
+                            className="mt-1 form-input block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:border-blue-300 transition duration-150"
                           />
                         </div>
-                        {/* New RRC Field */}
+
+                        {/* RRCLeaseID (varchar(6)) */}
                         <div>
                           <label
-                            htmlFor="RRC"
+                            htmlFor={`RRCLeaseID-${index}`}
                             className="block text-sm font-medium text-gray-700"
                           >
-                            RRC
+                            RRCLeaseID
                           </label>
                           <input
+                            id={`RRCLeaseID-${index}`}
+                            name="RRCLeaseID"
                             type="text"
-                            placeholder="RRC"
-                            value={well.RRC}
+                            maxLength={6}
+                            placeholder="RRCLeaseID"
+                            value={well.RRCLeaseID}
                             onChange={(e) =>
                               setFormData({
                                 ...formData,
                                 Wells: formData.Wells.map((w, i) =>
                                   i === index
-                                    ? { ...w, RRC: e.target.value }
+                                    ? { ...w, RRCLeaseID: e.target.value }
                                     : w
                                 ),
                               })
                             }
-                            className="mt-1 form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-blue-300 transition duration-150"
+                            className="mt-1 form-input block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:border-blue-300 transition duration-150"
                           />
                         </div>
-                        {/* New CP Field */}
+
+                        {/* CP */}
                         <div>
                           <label
-                            htmlFor="CP"
+                            htmlFor={`CP-${index}`}
                             className="block text-sm font-medium text-gray-700"
                           >
                             CP
                           </label>
                           <input
+                            id={`CP-${index}`}
+                            name="CP"
                             type="text"
                             placeholder="CP"
                             value={well.CP}
@@ -1351,18 +1317,23 @@ const EditLeaseModal = ({
                                 ),
                               })
                             }
-                            className="mt-1 form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-blue-300 transition duration-150"
+                            className="mt-1 form-input block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:border-blue-300 transition duration-150"
                           />
                         </div>
+
+                        {/* Active */}
                         <div>
                           <label
-                            htmlFor="Active"
+                            htmlFor={`Active-${index}`}
                             className="block text-sm font-medium text-gray-700"
                           >
                             Active
                           </label>
                           <select
+                            id={`Active-${index}`}
+                            name="Active"
                             value={well.Active}
+                            required
                             onChange={(e) =>
                               setFormData({
                                 ...formData,
@@ -1373,13 +1344,14 @@ const EditLeaseModal = ({
                                 ),
                               })
                             }
-                            className="mt-1 form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-blue-300 transition duration-150"
-                            required
+                            className="mt-1 form-input block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:border-blue-300 transition duration-150"
                           >
                             <option value="Y">Active</option>
                             <option value="N">Inactive</option>
                           </select>
                         </div>
+
+                        {/* Delete button */}
                         <div className="col-span-2 flex justify-end">
                           <button
                             type="button"
@@ -1393,6 +1365,8 @@ const EditLeaseModal = ({
                     )}
                   </div>
                 ))}
+
+                {/* toast error */}
                 {toast.visible && (
                   <div className="fixed inset-0 flex items-center justify-center z-50">
                     <div className="bg-red-500 text-white p-4 rounded shadow-lg">
