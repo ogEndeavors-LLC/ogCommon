@@ -8,22 +8,22 @@ export const useUser = () => {
 };
 
 export const UserProvider = ({ children }) => {
+  /* ──────────────── STATE ──────────────── */
   const [userRole, setUserRole] = useState("");
   const [userID, setUserID] = useState(null);
   const [companyName, setCompanyName] = useState(null);
   const [jobRole, setJobRole] = useState("");
+  const [subdomain, setSubdomain] = useState(""); // NEW
+  const [userEmail, setUserEmail] = useState(""); // NEWER
+  const [userPhone, setUserPhone] = useState(""); // NEWER
 
-  // New fields for Email & Phone
-  const [userEmail, setUserEmail] = useState("");
-  const [userPhone, setUserPhone] = useState("");
-
+  /* ──────────── INIT FROM localStorage ──────────── */
   useEffect(() => {
     const storedUserRole = localStorage.getItem("userRole");
     const storedUserID = localStorage.getItem("userID");
     const storedCompanyName = localStorage.getItem("companyName");
     const storedJobRole = localStorage.getItem("jobRole");
-
-    // Check for newly added items
+    const storedSubdomain = localStorage.getItem("subdomain"); // NEW
     const storedUserEmail = localStorage.getItem("userEmail");
     const storedUserPhone = localStorage.getItem("userPhone");
 
@@ -31,8 +31,7 @@ export const UserProvider = ({ children }) => {
     if (storedUserID) setUserID(storedUserID);
     if (storedCompanyName) setCompanyName(storedCompanyName);
     if (storedJobRole) setJobRole(storedJobRole);
-
-    // Set email & phone if present in localStorage
+    if (storedSubdomain) setSubdomain(storedSubdomain); // NEW
     if (storedUserEmail) setUserEmail(storedUserEmail);
     if (storedUserPhone) setUserPhone(storedUserPhone);
   }, []);
@@ -40,29 +39,33 @@ export const UserProvider = ({ children }) => {
   /**
    * Updates all user info in context and localStorage.
    *
-   * @param {string} role - User role
-   * @param {string|number} id - User ID
-   * @param {string} company - Company name
-   * @param {string} jRole - Job role
-   * @param {string} email - User email
-   * @param {string} phone - User phone number
+   * @param {string}  role       - User role
+   * @param {string}  id         - User ID
+   * @param {string}  company    - Company name
+   * @param {string}  jRole      - Job role
+   * @param {string}  sub        - Subdomain                           (NEW)
+   * @param {string}  email      - User email (optional)
+   * @param {string}  phone      - User phone number (optional)
    */
-  const setUser = (role, id, company, jRole, email, phone) => {
+  const setUser = (role, id, company, jRole, sub, email = "", phone = "") => {
     setUserRole(role);
     setUserID(id);
     setCompanyName(company);
     setJobRole(jRole);
-    setUserEmail(email || "");
-    setUserPhone(phone || "");
+    setSubdomain(sub); // NEW
+    setUserEmail(email);
+    setUserPhone(phone);
 
     localStorage.setItem("userRole", role);
     localStorage.setItem("userID", id);
     localStorage.setItem("companyName", company);
     localStorage.setItem("jobRole", jRole);
-    localStorage.setItem("userEmail", email || "");
-    localStorage.setItem("userPhone", phone || "");
+    localStorage.setItem("subdomain", sub); // NEW
+    localStorage.setItem("userEmail", email);
+    localStorage.setItem("userPhone", phone);
   };
 
+  /* ──────────────── PROVIDER ──────────────── */
   return (
     <UserContext.Provider
       value={{
@@ -70,6 +73,7 @@ export const UserProvider = ({ children }) => {
         userID,
         companyName,
         jobRole,
+        subdomain, // NEW
         userEmail,
         userPhone,
         setUser,
